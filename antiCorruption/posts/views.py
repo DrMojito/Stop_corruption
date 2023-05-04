@@ -1,10 +1,12 @@
 from django.http import HttpResponse, HttpResponseNotFound, Http404
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 
-from .models import Posts, Category
+from .models import Posts
+from .forms import AddPostForm
+
 
 menu = [{'title': "Новости", 'url_name': 'news'},
-        {'title': "Сообщения", 'url_name': 'message'},
+        {'title': "Добавить запись", 'url_name': 'message'},
         {'title': "Форум", 'url_name': 'forum'},
         {'title': "О нас", 'url_name': 'about'},
         {'title': "Контакты", 'url_name': 'contact'},
@@ -15,20 +17,18 @@ menu = [{'title': "Новости", 'url_name': 'news'},
 def index(request):
     templates = 'posts/index.html'
     posts = Posts.objects.all()
-    cats = Category.objects.all()
     context = {'title': 'Главная странциа',
                'menu': menu,
                'posts': posts,
-               'cats': cats,
                'cat_selected': 0}
-    return render(request, templates, context)
+    return render(request, templates, context=context)
 
 
 def about(request):
     templates = 'posts/about.html'
     context = {'title': 'О нас',
                'menu': menu}
-    return render(request, templates, context)
+    return render(request, templates, context=context)
 
 
 def news(request):
@@ -36,7 +36,23 @@ def news(request):
 
 
 def message(request):
-    return HttpResponse('Сообщения')
+    templates = 'posts/addpage.html'
+    if request.method == 'POST':
+        form = AddPostForm(request.POST)
+        if form.is_valid():
+            # print(form.cleaned_data)
+            try:
+                Posts.objects.create(**form.cleaned_data)
+                return redirect('home')
+            except:
+                form.add_error(None, 'Ошибка добавления поста')
+    else:
+        form = AddPostForm()
+
+    context = {'menu': menu,
+               'title': 'Добавление записи',
+               'form': form}
+    return render(request, templates, context=context)
 
 
 def forum(request):
@@ -55,23 +71,30 @@ def registration(request):
     return HttpResponse('Регистрация')
 
 
-def show_post(request, post_id):
-    return HttpResponse(f'Пост №{post_id}')
+def show_post(request, post_slug):
+    templates = 'posts/post.html'
+    post = get_object_or_404(Posts, slug=post_slug)
+
+    context = {
+        'post': post,
+        'menu': menu,
+        'title': post.title,
+        'cat_selected': post.cat_id,
+    }
+    return render(request, templates, context=context)
 
 
 def show_category(request, cat_id):
     templates = 'posts/index.html'
     posts = Posts.objects.filter(cat_id=cat_id)
-    cats = Category.objects.all()
 
     if len(posts) == 0:
         raise Http404()
 
     context = {'title': 'Категории',
                'menu': menu,
-               'posts': posts,
-               'cats': cats}
-    return render(request, templates, context)
+               'posts': posts}
+    return render(request, templates, context=context)
 
 
 def pageNotFound(request, exception):
