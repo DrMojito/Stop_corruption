@@ -3,7 +3,7 @@ from django.urls import reverse
 
 
 class Posts(models.Model):
-    title = models.CharField(max_length=200,
+    title = models.CharField(max_length=199,
                              verbose_name="Заголовок")
     slug = models.SlugField(max_length=255,
                             unique=True,
@@ -12,7 +12,9 @@ class Posts(models.Model):
     descriptions = models.TextField(default=True,
                                     verbose_name="Описание")
     photo = models.ImageField(upload_to='photos/%Y/%m/%d/',
-                              verbose_name="Изображения")
+                              verbose_name="Изображения",
+                              null=True,
+                              blank=True)
     data_create = models.DateTimeField(auto_now_add=True,
                                        verbose_name="Дата публикации")
     is_published = models.BooleanField(default=True,
