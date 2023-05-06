@@ -1,32 +1,23 @@
-from typing import Any, Dict
-from django.http import HttpResponse, HttpResponseNotFound, Http404
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import HttpResponse, HttpResponseNotFound
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .models import Posts
-from .forms import AddPostForm
+from .forms import AddPostForm, RegisterUserForm
+from .utils import DataMixin, menu
 
 
-menu = [{'title': "Новости", 'url_name': 'news'},
-        {'title': "Добавить запись", 'url_name': 'message'},
-        {'title': "Форум", 'url_name': 'forum'},
-        {'title': "О нас", 'url_name': 'about'},
-        {'title': "Контакты", 'url_name': 'contact'},
-        {'title': "Вход", 'url_name': 'login'},
-        {'title': "Регистрация", 'url_name': 'registration'}]
-
-
-class PostIndex(ListView):
+class PostIndex(DataMixin, ListView):
     model = Posts
     template_name = 'posts/index.html'
     context_object_name = 'posts'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['menu'] = menu
-        context['title'] = 'Главная страница'
-        context['cat_selected'] = 0
+        c_def = self.get_user_context(title="Главная страница")
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
     def get_queryset(self):
@@ -44,34 +35,17 @@ def news(request):
     return HttpResponse('Новости')
 
 
-class AddPost(CreateView):
+class AddPost(LoginRequiredMixin, DataMixin, CreateView):
     form_class = AddPostForm
     template_name = 'posts/addpage.html'
     success_url = reverse_lazy('home')
+    login_url = reverse_lazy('home')
 
-    def get_context_data(self, *, object_list=None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['menu'] = menu
-        context['title'] = 'Добавить пост'
+        c_def = self.get_user_context(title="Добавить пост")
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
-
-
-
-# def message(request):
-#     templates = 'posts/addpage.html'
-#     if request.method == 'POST':
-#         form = AddPostForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             # print(form.cleaned_data)
-#             form.save()
-#             return redirect('home')
-#     else:
-#         form = AddPostForm()
-
-#     context = {'menu': menu,
-#                'title': 'Добавление записи',
-#                'form': form}
-#     return render(request, templates, context=context)
 
 
 def forum(request):
@@ -86,34 +60,43 @@ def login(request):
     return HttpResponse('Вход')
 
 
-def registration(request):
-    return HttpResponse('Регистрация')
+class RegisterUser(DataMixin, CreateView):
+    form_class = RegisterUserForm
+    template_name = 'posts/register.html'
+    success_url = reverse_lazy('login')
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        c_def = self.get_user_context(title="Регистрация")
+        context = dict(list(context.items()) + list(c_def.items()))
+        return context
 
 
-class ShowPost(DetailView):
+class ShowPost(DataMixin, DetailView):
     model = Posts
     template_name = 'posts/post.html'
     slug_url_kwarg = 'post_slug'
     context_object_name = 'post'
 
-    def get_context_data(self, *, object_list=None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['menu'] = menu
-        context['title'] = context['post']
+        c_def = self.get_user_context(title='Категория - ' +
+                                      str(context['post'][0].cat),
+                                      cat_selected=context['posts'][0].cat_id)
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
 
-class PostСategory(ListView):
+class PostСategory(DataMixin, ListView):
     model = Posts
     template_name = 'posts/index.html'
     context_object_name = 'posts'
     allow_empty = False
 
-    def get_context_data(self, *, object_list=None, **kwargs):
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['menu'] = menu
-        context['title'] = 'Категория - ' + str(context['posts'][0].cat)
-        context['cat_selected'] = context['posts'][0].cat_id
+        c_def = self.get_user_context(title="Категория - ")
+        context = dict(list(context.items()) + list(c_def.items()))
         return context
 
     def get_queryset(self):

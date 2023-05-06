@@ -32,7 +32,7 @@ class Posts(models.Model):
     class Meta:
         verbose_name = 'Публикации'
         verbose_name_plural = 'Публикации'
-        ordering = ['data_create', 'title']
+        ordering = ['id']
 
 
 class Category(models.Model):

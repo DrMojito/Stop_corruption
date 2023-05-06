@@ -1,6 +1,15 @@
 from django.urls import path
 
-from .views import PostIndex, about, news, AddPost, forum, contact, login, registration, ShowPost, PostСategory
+from .views import (PostIndex,
+                    about,
+                    news,
+                    AddPost,
+                    forum,
+                    contact,
+                    login,
+                    RegisterUser,
+                    ShowPost,
+                    PostСategory)
 
 
 urlpatterns = [
@@ -11,7 +20,7 @@ urlpatterns = [
     path('forum/', forum, name='forum'),
     path('contact/', contact, name='contact'),
     path('login/', login, name='login'),
-    path('registration/', registration, name='registration'),
+    path('register/', RegisterUser.as_view(), name='register'),
     path('post/<slug:post_slug>/', ShowPost.as_view(), name='post'),
     path('category/<slug:cat_slug>/', PostСategory.as_view(), name='category'),
 ]
