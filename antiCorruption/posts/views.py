@@ -1,11 +1,17 @@
 from django.http import HttpResponse, HttpResponseNotFound
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
+from django.contrib.auth import logout, login
+from django.views.generic.edit import FormView
 
 from .models import Posts
-from .forms import AddPostForm, RegisterUserForm
+from .forms import (AddPostForm,
+                    RegisterUserForm,
+                    LoginUserForm,
+                    ContactForm)
 from .utils import DataMixin, menu
 
 
@@ -21,7 +27,7 @@ class PostIndex(DataMixin, ListView):
         return context
 
     def get_queryset(self):
-        return Posts.objects.filter(is_published=True)
+        return Posts.objects.filter(is_published=True).select_related('cat')
 
 
 def about(request):
@@ -52,12 +58,34 @@ def forum(request):
     return HttpResponse('Форум')
 
 
-def contact(request):
-    return HttpResponse('Контакты')
+class FeedBackFormView(DataMixin, FormView):
+    form_class = ContactForm
+    template_name = 'posts/contact.html'
+    success_url = reverse_lazy('home')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        c_def = self.get_user_context(title="Обратная связь")
+        context = dict(list(context.items()) + list(c_def.items()))
+        return context
+    
+    def form_valid(self, form):
+        print(form.cleaned_data)
+        return redirect('home')
 
 
-def login(request):
-    return HttpResponse('Вход')
+class LoginUser(DataMixin, LoginView):
+    form_class = LoginUserForm
+    template_name = 'posts/login.html'
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        c_def = self.get_user_context(title="Авторизация")
+        context = dict(list(context.items()) + list(c_def.items()))
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('home')
 
 
 class RegisterUser(DataMixin, CreateView):
@@ -70,6 +98,11 @@ class RegisterUser(DataMixin, CreateView):
         c_def = self.get_user_context(title="Регистрация")
         context = dict(list(context.items()) + list(c_def.items()))
         return context
+
+    def form_valid(self, form):
+        user = form.save()
+        login(self.request, user)
+        return redirect('home')
 
 
 class ShowPost(DataMixin, DetailView):
@@ -101,7 +134,12 @@ class PostСategory(DataMixin, ListView):
 
     def get_queryset(self):
         return Posts.objects.filter(is_published=True,
-                                    cat__slug=self.kwargs['cat_slug'])
+                                    cat__slug=self.kwargs['cat_slug']).select_related('cat')
+
+
+def logout_user(request):
+    logout(request)
+    return redirect('login')
 
 
 def pageNotFound(request, exception):
